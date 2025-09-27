@@ -55,7 +55,10 @@ func (m *Manager) LoadConfig() error {
 	m.config = cfg
 
 	// 새 터널들 생성 및 시작
-	for _, tunnelConfig := range cfg.GetEnabledTunnels() {
+	enabledTunnels := cfg.GetEnabledTunnels()
+	successCount := 0
+
+	for _, tunnelConfig := range enabledTunnels {
 		if err := tunnelConfig.Validate(); err != nil {
 			log.Printf("터널 '%s' 설정 오류: %v", tunnelConfig.Name, err)
 			continue
@@ -68,11 +71,18 @@ func (m *Manager) LoadConfig() error {
 		go func(t *tunnel.Tunnel) {
 			if err := t.Start(); err != nil {
 				log.Printf("터널 '%s' 시작 실패: %v", t.GetConfig().Name, err)
+			} else {
+				successCount++
 			}
 		}(t)
 	}
 
-	log.Printf("설정 로드 완료: %d개 터널 활성화", len(m.tunnels))
+	// 잠시 대기 후 성공한 터널 수 로그
+	go func() {
+		time.Sleep(2 * time.Second)
+		log.Printf("설정 로드 완료: %d개 터널 활성화", successCount)
+	}()
+
 	return nil
 }
 

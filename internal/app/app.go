@@ -451,8 +451,8 @@ func (app *TunnelApp) updateTrayIcon() {
 
 			systray.SetIcon(iconData)
 			app.iconPath = newIconName
-			// 첫 번째 시도에서만 로그 출력
-			if i == 0 {
+			// 첫 번째 시도에서만 로그 출력 (상태 변경 시에만)
+			if i == 0 && (healthyCount == 0 || healthyCount == totalCount) {
 				log.Printf("트레이 아이콘 변경: %s (%d/%d)", newIconName, healthyCount, totalCount)
 			}
 		}()
@@ -466,13 +466,10 @@ func (app *TunnelApp) updateTrayIcon() {
 
 func (app *TunnelApp) logTrayStatus() {
 	log.Printf("=== %s 애플리케이션 시작됨 ===", version.AppFullName)
-	log.Println("==========================================")
 }
 
 // CleanupSSHProcesses 남은 SSH 프로세스 정리 (Public)
 func (app *TunnelApp) CleanupSSHProcesses() {
-	log.Println("남은 SSH 프로세스 정리 중...")
-
 	// 여러 방법으로 SSH 프로세스 정리 시도
 	cleanupMethods := []struct {
 		name string

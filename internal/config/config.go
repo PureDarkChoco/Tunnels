@@ -38,13 +38,18 @@ func DefaultConfig() *Config {
 
 // LoadConfig 설정 파일 로드
 func LoadConfig(configPath string) (*Config, error) {
-	// 파일이 존재하지 않으면 기본 설정으로 생성
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+	// 파일 존재 여부 및 권한 확인
+	_, err := os.Stat(configPath)
+	if os.IsNotExist(err) {
 		config := DefaultConfig()
 		if err := SaveConfig(config, configPath); err != nil {
 			return nil, fmt.Errorf("기본 설정 파일 생성 실패: %v", err)
 		}
 		return config, nil
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("설정 파일 접근 실패: %v", err)
 	}
 
 	data, err := os.ReadFile(configPath)
