@@ -1,0 +1,67 @@
+# SSH 터널 설정 파일 예제
+# 이 파일을 복사하여 tunnels.conf로 이름을 변경하고 실제 설정으로 수정하세요.
+
+tunnels:
+  # 예제 1: 웹 서버 터널
+  - name: "web-server"
+    local_port: 8080
+    remote_host: "192.168.1.100"
+    remote_port: 80
+    ssh_host: "ssh.example.com"
+    ssh_port: 22
+    ssh_user: "username"
+    ssh_key_path: "C:\\Users\\YourName\\.ssh\\id_rsa.pem"  # SSH 키 파일 경로 (권장)
+    # ssh_password: "your_password"  # 패스워드 인증 (키 파일이 없을 때만 사용)
+    enabled: true
+
+  # 예제 2: 데이터베이스 터널
+  - name: "database"
+    local_port: 3306
+    remote_host: "10.0.0.50"
+    remote_port: 3306
+    ssh_host: "db-server.example.com"
+    ssh_port: 22
+    ssh_user: "dbuser"
+    ssh_key_path: "C:\\Users\\YourName\\.ssh\\db_key.pem"
+    enabled: true
+
+  # 예제 3: 개발 서버 터널 (비활성화 예제)
+  - name: "dev-server"
+    local_port: 3000
+    remote_host: "127.0.0.1"
+    remote_port: 3000
+    ssh_host: "dev.example.com"
+    ssh_port: 2222
+    ssh_user: "developer"
+    ssh_password: "dev_password"
+    enabled: false
+
+  # 예제 4: 멀티 홉 터널 (점프 서버를 통한 터널)
+  - name: "internal-server"
+    local_port: 5432
+    remote_host: "192.168.10.100"
+    remote_port: 5432
+    ssh_host: "jump.example.com"  # 점프 서버
+    ssh_port: 22
+    ssh_user: "jumpuser"
+    ssh_key_path: "C:\\Users\\YourName\\.ssh\\jump_key.pem"
+    enabled: true
+
+# 연결 상태 체크 간격 (초)
+# 권장값: 15-20초 (빠른 감지 + 낮은 부하)
+# 현재값: 15초
+# 기본값: 30초 (낮은 부하, 느린 감지)
+check_interval: 15
+
+# 설정 옵션 설명:
+# - name: 터널의 고유 이름 (메뉴에 표시됨)
+# - local_port: 로컬에서 사용할 포트 번호
+# - remote_host: 최종 목적지 호스트 (터널을 통해 접근할 서버)
+# - remote_port: 최종 목적지 포트
+# - ssh_host: SSH 서버 주소 (터널을 생성할 서버)
+# - ssh_port: SSH 서버 포트 (기본값: 22)
+# - ssh_user: SSH 사용자명
+# - ssh_key_path: SSH 개인키 파일 경로 (권장)
+# - ssh_password: SSH 패스워드 (키 파일이 없을 때만 사용)
+# - enabled: 터널 활성화 여부 (true/false)
+# - check_interval: 연결 상태 확인 간격 (초)
