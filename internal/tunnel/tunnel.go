@@ -252,28 +252,6 @@ func (t *Tunnel) checkConnection() {
 
 	t.lastCheck = time.Now()
 
-	// 로컬 포트가 열려있는지 확인
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", t.config.LocalPort), 5*time.Second)
-	if err != nil {
-		if t.status == StatusConnected {
-			t.status = StatusError
-			t.lastError = fmt.Sprintf("로컬 포트 %d 연결 실패: %v", t.config.LocalPort, err)
-			log.Printf("터널 '%s' 연결 끊어짐: %v - 자동 재시작 시도", t.config.Name, err)
-
-			// 자동 재시작 시도
-			go func() {
-				time.Sleep(2 * time.Second) // 잠시 대기 후 재시작
-				if err := t.Restart(); err != nil {
-					log.Printf("터널 '%s' 자동 재시작 실패: %v", t.config.Name, err)
-				} else {
-					log.Printf("터널 '%s' 자동 재시작 성공", t.config.Name)
-				}
-			}()
-		}
-		return
-	}
-	conn.Close()
-
 	// 프로세스가 살아있는지 확인
 	if t.process != nil && t.process.Process != nil {
 		// Windows에서는 Signal(0) 대신 프로세스 상태를 다른 방식으로 확인
@@ -287,13 +265,31 @@ func (t *Tunnel) checkConnection() {
 				time.Sleep(2 * time.Second) // 잠시 대기 후 재시작
 				if err := t.Restart(); err != nil {
 					log.Printf("터널 '%s' 자동 재시작 실패: %v", t.config.Name, err)
-				} else {
-					log.Printf("터널 '%s' 자동 재시작 성공", t.config.Name)
 				}
 			}()
 			return
 		}
 	}
+
+	// 로컬 포트가 열려있는지 확인
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", t.config.LocalPort), 5*time.Second)
+	if err != nil {
+		if t.status == StatusConnected {
+			t.status = StatusError
+			t.lastError = fmt.Sprintf("로컬 포트 %d 연결 실패: %v", t.config.LocalPort, err)
+			log.Printf("터널 '%s' 로컬 포트 연결 실패: %v - 자동 재시작 시도", t.config.Name, err)
+
+			// 자동 재시작 시도
+			go func() {
+				time.Sleep(2 * time.Second) // 잠시 대기 후 재시작
+				if err := t.Restart(); err != nil {
+					log.Printf("터널 '%s' 자동 재시작 실패: %v", t.config.Name, err)
+				}
+			}()
+		}
+		return
+	}
+	conn.Close()
 
 	if t.status != StatusConnected {
 		t.status = StatusConnected
