@@ -88,8 +88,14 @@ func (app *TunnelApp) OnReady() {
 	// 상태 업데이트 루프 시작
 	go app.updateStatusLoop()
 
-	// 아이콘 업데이트 루프 시작 (더 긴 간격)
+	// 아이콘 업데이트 루프 시작
 	go app.updateIconLoop()
+
+	// 최초 아이콘 업데이트
+	go func() {
+		time.Sleep(1 * time.Second)
+		app.updateTrayIcon()
+	}()
 }
 
 // OnExit 시스템 트레이 종료 시 호출
@@ -233,7 +239,7 @@ func (app *TunnelApp) updateStatusLoop() {
 	}
 }
 
-// updateIconLoop 아이콘 업데이트 루프 (더 긴 간격)
+// updateIconLoop 아이콘 업데이트 루프
 func (app *TunnelApp) updateIconLoop() {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
