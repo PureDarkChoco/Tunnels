@@ -350,17 +350,17 @@ func (app *TunnelApp) formatTunnelStatus(status manager.TunnelStatus) string {
 
 	switch status.Status {
 	case tunnel.StatusConnected:
-		statusText = fmt.Sprintf("● %s (%s:%d) [CONNECTED]",
-			status.Name, config.RemoteHost, config.RemotePort)
+		statusText = fmt.Sprintf("● %s (%d) [CONNECTED]",
+			status.Name, config.LocalPort)
 	case tunnel.StatusConnecting:
-		statusText = fmt.Sprintf("⊙ %s (%s:%d) [CONNECTING...]",
-			status.Name, config.RemoteHost, config.RemotePort)
+		statusText = fmt.Sprintf("⊙ %s (%d) [CONNECTING...]",
+			status.Name, config.LocalPort)
 	case tunnel.StatusError:
-		statusText = fmt.Sprintf("⊗ %s (%s:%d) [ERROR]",
-			status.Name, config.RemoteHost, config.RemotePort)
+		statusText = fmt.Sprintf("⊗ %s (%d) [ERROR]",
+			status.Name, config.LocalPort)
 	default:
-		statusText = fmt.Sprintf("○ %s (%s:%d) [DISCONNECTED]",
-			status.Name, config.RemoteHost, config.RemotePort)
+		statusText = fmt.Sprintf("○ %s (%d) [DISCONNECTED]",
+			status.Name, config.LocalPort)
 	}
 
 	return statusText
