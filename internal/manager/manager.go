@@ -199,15 +199,9 @@ func (m *Manager) checkAndReconnect() {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	for name, t := range m.tunnels {
-		if !t.IsHealthy() {
-			// 재연결 시도 로그는 에러 발생 시에만 출력
-			go func(tunnelName string, tunnel *tunnel.Tunnel) {
-				if err := tunnel.Restart(); err != nil {
-					log.Printf("터널 '%s' 재연결 실패: %v", tunnelName, err)
-				}
-			}(name, t)
-		}
+	for _, t := range m.tunnels {
+		// 연결 상태 확인
+		t.CheckConnection()
 	}
 }
 
