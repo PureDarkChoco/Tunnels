@@ -84,10 +84,13 @@ func (m *Manager) LoadConfig() error {
 		}(t)
 	}
 
-	// 잠시 대기 후 성공한 터널 수 로그
+	// 잠시 대기 후 성공한 터널 수 로그 및 즉시 상태 확인
 	go func() {
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 		log.Printf("설정 로드 완료: %d개 터널 활성화", successCount)
+
+		// 최초 상태 확인 (즉시 업데이트)
+		m.checkAndReconnect()
 	}()
 
 	return nil
