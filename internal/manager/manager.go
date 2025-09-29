@@ -14,6 +14,7 @@ import (
 // Manager 터널 매니저
 type Manager struct {
 	tunnels    map[string]*tunnel.Tunnel
+	tunnelOrder []string  // 터널 순서를 유지하기 위한 슬라이스
 	config     *config.Config
 	configPath string
 	mu         sync.RWMutex
@@ -25,10 +26,11 @@ type Manager struct {
 func NewManager(configPath string) *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Manager{
-		tunnels:    make(map[string]*tunnel.Tunnel),
-		configPath: configPath,
-		ctx:        ctx,
-		cancel:     cancel,
+		tunnels:     make(map[string]*tunnel.Tunnel),
+		tunnelOrder: make([]string, 0),
+		configPath:  configPath,
+		ctx:         ctx,
+		cancel:      cancel,
 	}
 }
 
@@ -48,6 +50,9 @@ func (m *Manager) LoadConfig() error {
 		delete(m.tunnels, name)
 	}
 
+	// 터널 순서 초기화
+	m.tunnelOrder = make([]string, 0)
+
 	// 새 context 생성 (기존 context가 취소되었을 수 있음)
 	m.ctx, m.cancel = context.WithCancel(context.Background())
 
@@ -66,6 +71,8 @@ func (m *Manager) LoadConfig() error {
 
 		t := tunnel.NewTunnel(tunnelConfig)
 		m.tunnels[tunnelConfig.Name] = t
+		// 터널 순서 저장 (설정 파일 순서 유지)
+		m.tunnelOrder = append(m.tunnelOrder, tunnelConfig.Name)
 
 		// 비동기로 터널 시작
 		go func(t *tunnel.Tunnel) {
@@ -144,23 +151,26 @@ func (m *Manager) RestartAll() error {
 	return nil
 }
 
-// GetTunnelStatuses 모든 터널 상태 반환
-func (m *Manager) GetTunnelStatuses() map[string]TunnelStatus {
+// GetTunnelStatuses 모든 터널 상태 반환 (순서 보장)
+func (m *Manager) GetTunnelStatuses() []TunnelStatus {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	statuses := make(map[string]TunnelStatus)
-	for name, t := range m.tunnels {
-		statuses[name] = TunnelStatus{
-			Name:       name,
-			Status:     t.GetStatus(),
-			Config:     t.GetConfig(),
-			LastError:  t.GetLastError(),
-			LastCheck:  t.GetLastCheck(),
-			Connection: t.GetConnectionString(),
+	statuses := make([]TunnelStatus, 0, len(m.tunnels))
+
+	// 설정 파일 순서대로 터널 상태 반환
+	for _, name := range m.tunnelOrder {
+		if t, exists := m.tunnels[name]; exists {
+			statuses = append(statuses, TunnelStatus{
+				Name:       name,
+				Status:     t.GetStatus(),
+				Config:     t.GetConfig(),
+				LastError:  t.GetLastError(),
+				LastCheck:  t.GetLastCheck(),
+				Connection: t.GetConnectionString(),
+			})
 		}
 	}
-
 	return statuses
 }
 

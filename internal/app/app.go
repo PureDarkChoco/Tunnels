@@ -330,11 +330,14 @@ func (app *TunnelApp) updateMenuForConfigReload() {
 		if _, exists := app.statusItems[name]; !exists {
 			// 새 터널에 대한 상태 항목 생성
 			tunnelStatuses := app.manager.GetTunnelStatuses()
-			if tunnelStatus, exists := tunnelStatuses[name]; exists {
-				statusText := app.formatTunnelStatus(tunnelStatus)
-				item := systray.AddMenuItem(statusText, fmt.Sprintf("Tunnel: %s", name))
-				app.setStatusIcon(item, tunnelStatus.Status)
-				app.statusItems[name] = item
+			for _, tunnelStatus := range tunnelStatuses {
+				if tunnelStatus.Name == name {
+					statusText := app.formatTunnelStatus(tunnelStatus)
+					item := systray.AddMenuItem(statusText, fmt.Sprintf("Tunnel: %s", name))
+					app.setStatusIcon(item, tunnelStatus.Status)
+					app.statusItems[name] = item
+					break
+				}
 			}
 		}
 	}
