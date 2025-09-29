@@ -6,6 +6,7 @@ import (
 	"log"
 	"os/exec"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -365,8 +366,14 @@ func (app *TunnelApp) formatTunnelStatus(status manager.TunnelStatus) string {
 		statusText = fmt.Sprintf("⊙ %s (%d) [CONNECTING...]",
 			status.Name, config.LocalPort)
 	case tunnel.StatusError:
-		statusText = fmt.Sprintf("⊗ %s (%d) [ERROR]",
-			status.Name, config.LocalPort)
+		// 키 파일 권한 오류인지 확인
+		if strings.Contains(status.LastError, "키 파일 권한 오류") {
+			statusText = fmt.Sprintf("⊗ %s (%d) [AUTH ERROR]",
+				status.Name, config.LocalPort)
+		} else {
+			statusText = fmt.Sprintf("⊗ %s (%d) [ERROR]",
+				status.Name, config.LocalPort)
+		}
 	default:
 		statusText = fmt.Sprintf("○ %s (%d) [DISCONNECTED]",
 			status.Name, config.LocalPort)

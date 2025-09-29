@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -127,4 +128,53 @@ func (t *TunnelConfig) Validate() error {
 // GetCheckIntervalDuration 체크 간격을 Duration으로 반환
 func (c *Config) GetCheckIntervalDuration() time.Duration {
 	return time.Duration(c.CheckInterval) * time.Second
+}
+
+// CheckKeyFilePermissions 키 파일 권한 확인
+func (t *TunnelConfig) CheckKeyFilePermissions() error {
+	// 키 파일이 설정되지 않은 경우 (패스워드 인증 사용) 패스
+	if t.SSHKeyPath == "" {
+		return nil
+	}
+
+	// 파일 존재 여부 확인
+	info, err := os.Stat(t.SSHKeyPath)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("SSH 키 파일이 존재하지 않습니다: %s", t.SSHKeyPath)
+	}
+	if err != nil {
+		return fmt.Errorf("SSH 키 파일 접근 실패: %s, 오류: %v", t.SSHKeyPath, err)
+	}
+
+	// 파일 권한 확인
+	mode := info.Mode()
+
+	// Windows에서는 파일 권한 체크 방식이 다름
+	if runtime.GOOS == "windows" {
+		// Windows에서는 파일이 읽기 가능한지만 확인
+		if mode&0400 == 0 {
+			return fmt.Errorf("SSH 키 파일 읽기 권한이 없습니다: %s (권한: %s)", t.SSHKeyPath, mode.String())
+		}
+	} else {
+		// Unix/Linux 시스템에서는 파일 권한이 너무 넓으면 경고
+		// SSH는 보안상 키 파일의 권한이 600 (소유자만 읽기/쓰기)이어야 함
+		if mode&0077 != 0 {
+			return fmt.Errorf("SSH 키 파일 권한이 너무 넓습니다: %s (권한: %s, 권장: 600)", t.SSHKeyPath, mode.String())
+		}
+	}
+
+	return nil
+}
+
+// CheckAllEnabledKeyFilePermissions 모든 활성화된 터널의 키 파일 권한 확인
+func (c *Config) CheckAllEnabledKeyFilePermissions() []error {
+	var errors []error
+
+	for _, tunnel := range c.GetEnabledTunnels() {
+		if err := tunnel.CheckKeyFilePermissions(); err != nil {
+			errors = append(errors, fmt.Errorf("터널 '%s': %v", tunnel.Name, err))
+		}
+	}
+
+	return errors
 }

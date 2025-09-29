@@ -41,6 +41,16 @@ func (m *Manager) LoadConfig() error {
 		return fmt.Errorf("설정 로드 실패: %v", err)
 	}
 
+	// 키 파일 권한 확인 (모든 활성화된 터널에 대해)
+	keyPermissionErrors := cfg.CheckAllEnabledKeyFilePermissions()
+	if len(keyPermissionErrors) > 0 {
+		log.Printf("=== SSH 키 파일 권한 확인 결과 ===")
+		for _, err := range keyPermissionErrors {
+			log.Printf("권한 오류: %v", err)
+		}
+		log.Printf("=== 권한 문제로 인해 해당 터널들은 연결되지 않습니다 ===")
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -62,17 +72,32 @@ func (m *Manager) LoadConfig() error {
 	// 새 터널들 생성 및 시작
 	enabledTunnels := cfg.GetEnabledTunnels()
 	successCount := 0
+	skippedCount := 0
 
 	for _, tunnelConfig := range enabledTunnels {
-		if err := tunnelConfig.Validate(); err != nil {
-			log.Printf("터널 '%s' 설정 오류: %v", tunnelConfig.Name, err)
-			continue
-		}
-
+		// 터널 인스턴스는 항상 생성 (목록 표시를 위해)
 		t := tunnel.NewTunnel(tunnelConfig)
 		m.tunnels[tunnelConfig.Name] = t
 		// 터널 순서 저장 (설정 파일 순서 유지)
 		m.tunnelOrder = append(m.tunnelOrder, tunnelConfig.Name)
+
+		// 설정 검증
+		if err := tunnelConfig.Validate(); err != nil {
+			log.Printf("터널 '%s' 설정 오류: %v", tunnelConfig.Name, err)
+			// 터널 인스턴스에 오류 상태 설정
+			t.SetErrorStatus(err.Error())
+			skippedCount++
+			continue
+		}
+
+		// 키 파일 권한 확인
+		if err := tunnelConfig.CheckKeyFilePermissions(); err != nil {
+			log.Printf("터널 '%s' 키 파일 권한 문제로 연결 건너뜀: %v", tunnelConfig.Name, err)
+			// 터널 인스턴스에 오류 상태 설정
+			t.SetErrorStatus(fmt.Sprintf("키 파일 권한 오류: %v", err))
+			skippedCount++
+			continue
+		}
 
 		// 비동기로 터널 시작
 		go func(t *tunnel.Tunnel) {
@@ -87,7 +112,11 @@ func (m *Manager) LoadConfig() error {
 	// 잠시 대기 후 성공한 터널 수 로그 및 즉시 상태 확인
 	go func() {
 		time.Sleep(1 * time.Second)
-		log.Printf("설정 로드 완료: %d개 터널 활성화", successCount)
+		log.Printf("설정 로드 완료: %d개 터널 활성화, %d개 터널 건너뜀", successCount, skippedCount)
+
+		if skippedCount > 0 {
+			log.Printf("건너뛴 터널들은 설정 오류 또는 키 파일 권한 문제가 있습니다")
+		}
 
 		// 최초 상태 확인 (즉시 업데이트)
 		m.checkAndReconnect()

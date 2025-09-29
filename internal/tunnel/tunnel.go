@@ -256,6 +256,11 @@ func (t *Tunnel) CheckConnection() {
 
 	t.lastCheck = time.Now()
 
+	// 이미 오류 상태이고 재시도 횟수가 최대값에 도달한 경우 연결 확인하지 않음
+	if t.status == StatusError && t.retryCount >= t.maxRetries {
+		return
+	}
+
 	// 로컬 포트가 열려있는지 확인
 	conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", t.config.LocalPort), 5*time.Second)
 	if err != nil {
@@ -329,4 +334,15 @@ func (t *Tunnel) UpdateConfig(newConfig config.TunnelConfig) {
 			go t.Restart()
 		}
 	}
+}
+
+// SetErrorStatus 오류 상태 설정 (권한 문제 등으로 연결할 수 없는 경우)
+func (t *Tunnel) SetErrorStatus(errorMsg string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	t.status = StatusError
+	t.lastError = errorMsg
+	t.retryCount = t.maxRetries // 재시도 횟수를 최대값으로 설정하여 재시도 방지
+	log.Printf("터널 '%s' 오류 상태 설정: %s", t.config.Name, errorMsg)
 }
